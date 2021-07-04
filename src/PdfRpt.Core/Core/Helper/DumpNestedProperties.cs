@@ -29,21 +29,33 @@ namespace PdfRpt.Core.Helper
             {
                 var dataValue = propertyGetter.GetterFunc(data);
                 var name = string.Format("{0}{1}", parent, propertyGetter.Name);
+                var propertyType = propertyGetter.PropertyType;
+                var underlyingType = Nullable.GetUnderlyingType(propertyType);
+                var isNullable = underlyingType != null;
+                if (isNullable)
+                {
+                    propertyType = underlyingType;
+                }
+
                 if (dataValue == null)
                 {
                     var nullDisplayText = propertyGetter.MemberInfo.GetNullDisplayTextAttribute();
+                    if (isNullable && string.IsNullOrWhiteSpace(nullDisplayText))
+                    {
+                        nullDisplayText = null;
+                    }
                     _result.Add(new CellData
                     {
                         PropertyName = name,
                         PropertyValue = nullDisplayText,
                         PropertyIndex = _index++,
-                        PropertyType = propertyGetter.PropertyType
+                        PropertyType = propertyType
                     });
                 }
 #if NET40
-                else if (propertyGetter.PropertyType.IsEnum)
+                else if (propertyType.IsEnum)
 #else
-                else if (propertyGetter.PropertyType.GetTypeInfo().IsEnum)
+                else if (propertyType.GetTypeInfo().IsEnum)
 #endif
                 {
                     var enumValue = ((Enum)dataValue).GetEnumStringValue();
@@ -52,17 +64,17 @@ namespace PdfRpt.Core.Helper
                         PropertyName = name,
                         PropertyValue = enumValue,
                         PropertyIndex = _index++,
-                        PropertyType = propertyGetter.PropertyType
+                        PropertyType = propertyType
                     });
                 }
-                else if (isNestedProperty(propertyGetter.PropertyType))
+                else if (isNestedProperty(propertyType))
                 {
                     _result.Add(new CellData
                     {
                         PropertyName = name,
                         PropertyValue = dataValue,
                         PropertyIndex = _index++,
-                        PropertyType = propertyGetter.PropertyType
+                        PropertyType = propertyType
                     });
 
                     if (parent.Split('.').Length > dumpLevel)
@@ -78,7 +90,7 @@ namespace PdfRpt.Core.Helper
                         PropertyName = name,
                         PropertyValue = dataValue,
                         PropertyIndex = _index++,
-                        PropertyType = propertyGetter.PropertyType
+                        PropertyType = propertyType
                     });
                 }
             }
